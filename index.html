@@ -585,6 +585,14 @@ body {
     </div>
 
     <div class="settings-section">
+      <p class="settings-section-title">Debug</p>
+      <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:8px">
+        <button class="action-btn" onclick="debugStorage()" style="width:100%;justify-content:center">Check local storage</button>
+        <div id="debug-out" style="font-size:12px;color:var(--text-muted);word-break:break-all;line-height:1.6;display:none;padding-top:4px"></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <p class="settings-section-title">About</p>
       <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:2px">
         <div class="settings-row-label">PulseMark</div>
@@ -968,6 +976,19 @@ function saveProfile(p) {
   showToast(`${p==='mom'?'Mom':'Dad'}'s profile saved`, 'success');
 }
 
+function debugStorage() {
+  const out = document.getElementById('debug-out');
+  out.style.display = 'block';
+  const raw = localStorage.getItem('pm_bp');
+  const keys = Object.keys(localStorage);
+  out.innerHTML = `
+    <b>localStorage keys:</b> ${keys.join(', ') || 'none'}<br>
+    <b>pm_bp value:</b> ${raw ? raw.substring(0,200) : 'null'}<br>
+    <b>bpData mom keys:</b> ${Object.keys(bpData.mom||{}).join(', ') || 'none'}<br>
+    <b>bpData dad keys:</b> ${Object.keys(bpData.dad||{}).join(', ') || 'none'}
+  `;
+}
+
 // ── GOOGLE SHEETS SYNC ────────────────────────────
 async function ensureTab(sheetName) {
   const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`);
@@ -1013,7 +1034,8 @@ async function syncToSheet() {
   console.log('localStorage pm_bp:', localStorage.getItem('pm_bp'));
 
   if (momKeys.length===0 && dadKeys.length===0) {
-    showToast('No data found locally — check console','error');
+    const raw = localStorage.getItem('pm_bp');
+    showToast('No data in storage. Raw: '+(raw?raw.substring(0,60):'null'),'error');
     btn.classList.remove('syncing');
     return;
   }
