@@ -485,7 +485,10 @@ body {
   <!-- LOG -->
   <div id="screen-log" class="screen active">
     <div id="today-summary"></div>
-    <p class="section-label">Log today's readings</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <p class="section-label" style="margin-bottom:0">Log readings</p>
+      <input type="date" class="form-input" id="log-date" style="width:auto;font-size:13px;padding:6px 10px;font-weight:500" onchange="renderTodaySummary()">
+    </div>
     <div class="log-cards" id="log-cards"></div>
     <button class="save-btn" onclick="saveReadings()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -740,9 +743,13 @@ function buildLogCards() {
   });
 }
 
+function selectedDate() {
+  return document.getElementById('log-date')?.value || todayKey();
+}
+
 function renderTodaySummary() {
   const area = document.getElementById('today-summary');
-  const today = todayKey();
+  const today = selectedDate();
   const rec = bpData[currentPerson][today];
   if (!rec) { area.innerHTML=''; return; }
   const readings = [rec.r1,rec.r2,rec.r3];
@@ -767,7 +774,7 @@ function renderTodaySummary() {
 }
 
 function saveReadings() {
-  const today = todayKey();
+  const today = selectedDate();
   if (!bpData[currentPerson][today]) bpData[currentPerson][today]={};
   let saved=0, errors=0;
   ['r1','r2','r3'].forEach(key=>{
@@ -785,7 +792,8 @@ function saveReadings() {
   save('pm_bp', bpData);
   ['r1','r2','r3'].forEach(k=>['sys','dia','pulse'].forEach(f=>{const el=document.getElementById(k+'-'+f);if(el)el.value='';}));
   renderTodaySummary();
-  showToast(`Saved ${saved} reading${saved>1?'s':''} for ${currentPerson==='mom'?'Mom':'Dad'}`, 'success');
+  const isToday = selectedDate()===todayKey();
+  showToast(`Saved ${saved} reading${saved>1?'s':''} for ${currentPerson==='mom'?'Mom':'Dad'}${isToday?'':' · '+fmtDate(selectedDate())}`, 'success');
 }
 
 // ── TRENDS ────────────────────────────────────────
@@ -1025,7 +1033,7 @@ async function syncToSheet() {
 // ── INIT ──────────────────────────────────────────
 (function init(){
   if(settings_.dark) toggleDark(true);
-  // set today's date in milestone form
+  document.getElementById('log-date').value = todayKey();
   document.getElementById('ms-date').value = todayKey();
   buildLogCards();
   renderTodaySummary();
