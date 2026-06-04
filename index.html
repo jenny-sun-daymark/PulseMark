@@ -972,22 +972,27 @@ function saveProfile(p) {
 async function ensureTab(sheetName) {
   const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`);
   const info = await res.json();
+  if (info.error) throw new Error(info.error.message);
   const exists = info.sheets?.some(s=>s.properties.title===sheetName);
   if (!exists) {
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate?key=${API_KEY}`,{
+    const r2 = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate?key=${API_KEY}`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({requests:[{addSheet:{properties:{title:sheetName}}}]})
     });
+    const j2 = await r2.json();
+    if (j2.error) throw new Error(j2.error.message);
     await putRow(sheetName,1,['Date','R1 Systolic','R1 Diastolic','R1 Pulse','R2 Systolic','R2 Diastolic','R2 Pulse','R3 Systolic','R3 Diastolic','R3 Pulse','Avg Systolic','Avg Diastolic','Avg Pulse','Status']);
   }
 }
 
 async function putRow(sheetName, row, values) {
   const range=`${sheetName}!A${row}`;
-  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED&key=${API_KEY}`,{
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED&key=${API_KEY}`,{
     method:'PUT',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({range,majorDimension:'ROWS',values:[values]})
   });
+  const j = await res.json();
+  if (j.error) throw new Error(j.error.message);
 }
 
 async function getRows(sheetName) {
@@ -1025,7 +1030,8 @@ async function syncToSheet() {
     }
     showToast('Synced to Google Sheets ✓','success');
   } catch(e) {
-    showToast('Sync failed — check connection','error');
+    showToast('Error: '+e.message,'error');
+    console.error('Sync error:', e);
   }
   btn.classList.remove('syncing');
 }
