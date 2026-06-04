@@ -1003,6 +1003,20 @@ async function getRows(sheetName) {
 async function syncToSheet() {
   const btn=document.getElementById('sync-btn');
   btn.classList.add('syncing');
+
+  // Debug: check what data we have
+  const momKeys = Object.keys(bpData.mom||{});
+  const dadKeys = Object.keys(bpData.dad||{});
+  console.log('bpData mom keys:', momKeys);
+  console.log('bpData dad keys:', dadKeys);
+  console.log('Full bpData:', JSON.stringify(bpData));
+  console.log('localStorage pm_bp:', localStorage.getItem('pm_bp'));
+
+  if (momKeys.length===0 && dadKeys.length===0) {
+    showToast('No data found locally — check console','error');
+    btn.classList.remove('syncing');
+    return;
+  }
   try {
     for (const p of ['mom','dad']) {
       const name=SHEETS[p];
