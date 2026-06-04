@@ -989,84 +989,57 @@ function debugStorage() {
   `;
 }
 
-// ── GOOGLE SHEETS SYNC ────────────────────────────
-async function ensureTab(sheetName) {
-  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}?key=${API_KEY}`);
-  const info = await res.json();
-  if (info.error) throw new Error(info.error.message);
-  const exists = info.sheets?.some(s=>s.properties.title===sheetName);
-  if (!exists) {
-    const r2 = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate?key=${API_KEY}`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({requests:[{addSheet:{properties:{title:sheetName}}}]})
-    });
-    const j2 = await r2.json();
-    if (j2.error) throw new Error(j2.error.message);
-    await putRow(sheetName,1,['Date','R1 Systolic','R1 Diastolic','R1 Pulse','R2 Systolic','R2 Diastolic','R2 Pulse','R3 Systolic','R3 Diastolic','R3 Pulse','Avg Systolic','Avg Diastolic','Avg Pulse','Status']);
-  }
-}
+// ── GOOGLE SHEETS SYNC (via Apps Script) ─────────
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3a_4BuPQ7TthUjqfezYPoinE5s5el5Ocyd1mgfVBWOjpRpl9rrCJoL7OeUqacfXWO/exec';
 
-async function putRow(sheetName, row, values) {
-  const range=`${sheetName}!A${row}`;
-  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED&key=${API_KEY}`,{
-    method:'PUT',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({range,majorDimension:'ROWS',values:[values]})
+async function postToSheet(tab, date, row) {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ tab, date, row })
   });
   const j = await res.json();
-  if (j.error) throw new Error(j.error.message);
-}
-
-async function getRows(sheetName) {
-  const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(sheetName+'!A:N')}?key=${API_KEY}`);
-  const j=await res.json(); return j.values||[];
+  if (j.error) throw new Error(j.error);
+  return j;
 }
 
 async function syncToSheet() {
-  const btn=document.getElementById('sync-btn');
+  const btn = document.getElementById('sync-btn');
   btn.classList.add('syncing');
 
-  // Debug: check what data we have
   const momKeys = Object.keys(bpData.mom||{});
   const dadKeys = Object.keys(bpData.dad||{});
-  console.log('bpData mom keys:', momKeys);
-  console.log('bpData dad keys:', dadKeys);
-  console.log('Full bpData:', JSON.stringify(bpData));
-  console.log('localStorage pm_bp:', localStorage.getItem('pm_bp'));
 
   if (momKeys.length===0 && dadKeys.length===0) {
-    const raw = localStorage.getItem('pm_bp');
-    showToast('No data in storage. Raw: '+(raw?raw.substring(0,60):'null'),'error');
+    showToast('No data to sync yet','error');
     btn.classList.remove('syncing');
     return;
   }
+
   try {
+    let total = 0;
     for (const p of ['mom','dad']) {
-      const name=SHEETS[p];
-      await ensureTab(name);
-      const existing=await getRows(name);
-      const dateMap={};
-      existing.forEach((row,i)=>{if(i>0&&row[0]) dateMap[row[0]]=i+1;});
+      const tab = SHEETS[p];
       for (const k of Object.keys(bpData[p]).sort()) {
-        const d=bpData[p][k];
-        const rs=[d.r1,d.r2,d.r3];
-        const aS=avg(rs.map(r=>r?.sys).filter(Boolean));
-        const aD=avg(rs.map(r=>r?.dia).filter(Boolean));
-        const aP=avg(rs.map(r=>r?.pulse).filter(Boolean));
-        const st=aS&&aD?bpStatus(aS,aD):null;
-        const row=[k,
-          rs[0]?.sys||'',rs[0]?.dia||'',rs[0]?.pulse||'',
-          rs[1]?.sys||'',rs[1]?.dia||'',rs[1]?.pulse||'',
-          rs[2]?.sys||'',rs[2]?.dia||'',rs[2]?.pulse||'',
-          aS||'',aD||'',aP||'',st?st.label:''
+        const d = bpData[p][k];
+        const rs = [d.r1, d.r2, d.r3];
+        const aS = avg(rs.map(r=>r?.sys).filter(Boolean));
+        const aD = avg(rs.map(r=>r?.dia).filter(Boolean));
+        const aP = avg(rs.map(r=>r?.pulse).filter(Boolean));
+        const st = aS&&aD ? bpStatus(aS,aD) : null;
+        const row = [k,
+          rs[0]?.sys||'', rs[0]?.dia||'', rs[0]?.pulse||'',
+          rs[1]?.sys||'', rs[1]?.dia||'', rs[1]?.pulse||'',
+          rs[2]?.sys||'', rs[2]?.dia||'', rs[2]?.pulse||'',
+          aS||'', aD||'', aP||'', st?st.label:''
         ];
-        const targetRow=dateMap[k]||(existing.length+1);
-        if(!dateMap[k]) existing.push([]);
-        await putRow(name, targetRow, row);
+        await postToSheet(tab, k, row);
+        total++;
       }
     }
-    showToast('Synced to Google Sheets ✓','success');
+    showToast(`Synced ${total} day${total>1?'s':''} to Google Sheets ✓`, 'success');
   } catch(e) {
-    showToast('Error: '+e.message,'error');
+    showToast('Error: '+e.message, 'error');
     console.error('Sync error:', e);
   }
   btn.classList.remove('syncing');
