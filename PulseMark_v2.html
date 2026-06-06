@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PulseMark">
+<meta name="theme-color" content="#0f4c75" id="theme-color-meta">
+<title>PulseMark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --navy:#0f4c75; --navy-light:#1b6ca8; --navy-pale:#e8f1f8;
+  --coral:#c0392b; --coral-pale:#fdf0ef;
+  --teal:#0d7377; --teal-pale:#e6f4f4;
+  --green:#1a7a4a; --green-pale:#eaf5ee;
+  --amber:#d4720a; --amber-pale:#fef3e2;
+  --red:#a93226; --red-pale:#fdecea;
+  --text:#1a1a2e; --text-muted:#6b7280; --text-light:#9ca3af;
+  --bg:#f7f9fc; --surface:#ffffff; --surface2:#f0f4f8;
+  --border:#e5e9f0; --radius:14px; --radius-sm:8px;
+  --shadow:0 2px 12px rgba(15,76,117,0.08);
+  --header-bg:#0f4c75;
+}
+body.dark {
+  --text:#e8edf2; --text-muted:#8fa0b0; --text-light:#5a6a7a;
+  --bg:#111820; --surface:#1a2332; --surface2:#141d28;
+  --border:#243040; --navy-pale:#152236; --shadow:0 2px 12px rgba(0,0,0,0.3);
+  --header-bg:#0a1929; --coral-pale:#2a1515; --green-pale:#0f2218;
+  --amber-pale:#251a08; --red-pale:#2a1212; --teal-pale:#0a2020;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .2s,color .2s}
+
+.app-header{background:var(--header-bg);padding:16px 20px;position:sticky;top:0;z-index:100;transition:background .2s}
+.header-top{display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-icon{width:32px;height:32px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:18px;height:18px}
+.logo-text{font-family:'DM Serif Display',serif;font-size:20px;color:white;letter-spacing:-.3px}
+.logo-text span{color:rgba(255,255,255,.55);font-style:italic}
+.header-right{display:flex;gap:8px;align-items:center}
+.cloud-pill{font-size:11px;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:5px}
+.cloud-dot{width:7px;height:7px;border-radius:50%;background:#4caf50;flex-shrink:0}
+.cloud-dot.err{background:#f44336}.cloud-dot.spin{background:#ff9800;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.refresh-btn{background:rgba(255,255,255,.12);border:none;color:white;padding:6px 12px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .2s}
+.refresh-btn:hover{background:rgba(255,255,255,.22)}
+.refresh-btn svg{width:13px;height:13px}
+.refresh-btn.spinning svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transition:background .2s,border-color .2s}
+.nav-btn{flex:1;padding:10px 4px;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--text-light);font-size:10px;font-family:'DM Sans',sans-serif;font-weight:500;transition:color .2s}
+.nav-btn svg{width:22px;height:22px}
+.nav-btn.active{color:var(--navy)}
+
+.main{padding:20px 16px;padding-bottom:80px;max-width:500px;margin:0 auto}
+.screen{display:none}.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.screen.active>*{animation:fadeIn .2s ease both}
+
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);transition:background .2s,border-color .2s}
+
+/* Loading overlay */
+.overlay{position:fixed;inset:0;background:rgba(15,76,117,.18);backdrop-filter:blur(3px);z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.overlay.hidden{display:none}
+.ov-spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.4);border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite}
+.ov-text{font-size:14px;color:var(--navy);font-weight:500;background:white;padding:8px 18px;border-radius:20px;box-shadow:var(--shadow)}
+
+/* Today card */
+.today-card{padding:16px;margin-bottom:16px}
+.today-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.today-label{font-size:15px;font-weight:600}
+.today-date{font-size:13px;color:var(--text-muted)}
+.readings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.reading-pill{background:var(--bg);border-radius:var(--radius-sm);padding:10px 8px;text-align:center;border:1px solid var(--border);transition:background .2s}
+.reading-pill .rp-lbl{font-size:11px;color:var(--text-light);margin-bottom:4px;font-weight:500}
+.reading-pill .rp-bp{font-size:16px;font-weight:600;line-height:1.1}
+.reading-pill .rp-pulse{font-size:11px;color:var(--text-muted);margin-top:2px}
+.reading-pill .badge{display:inline-block;font-size:9px;padding:2px 6px;border-radius:20px;margin-top:4px;font-weight:600}
+.reading-pill.empty{opacity:.35}
+.reading-pill.empty .rp-bp{font-size:20px;color:var(--text-light)}
+.avg-strip{margin-top:10px;background:var(--navy-pale);border-radius:var(--radius-sm);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;transition:background .2s}
+.avg-strip .al{font-size:11px;color:var(--navy);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.avg-strip .av{font-size:15px;font-weight:700;color:var(--navy)}
+
+.section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:10px}
+
+/* LOG FORM */
+.log-card{padding:18px;margin-bottom:16px}
+.log-title{font-size:16px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.log-title svg{width:18px;height:18px;color:var(--navy)}
+.frow{display:grid;gap:10px;margin-bottom:12px}
+.frow.two{grid-template-columns:1fr 1fr}
+.frow.three{grid-template-columns:1fr 1fr 1fr}
+.fgroup{display:flex;flex-direction:column;gap:4px}
+.fgroup label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted)}
+.form-input,.form-select{width:100%;padding:10px 12px;font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);transition:border-color .2s,background .2s;-webkit-appearance:none}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--navy);background:var(--surface)}
+.form-input::placeholder{color:var(--text-light);font-weight:400;font-size:14px}
+.form-select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.form-input.num{text-align:center;font-size:22px;font-weight:700;padding:14px 8px;letter-spacing:.5px}
+.form-input.num::placeholder{font-size:15px;font-weight:400}
+.fdivider{height:1px;background:var(--border);margin:4px 0 12px}
+.form-textarea{width:100%;padding:10px 12px;font-size:14px;font-weight:400;line-height:1.5;font-family:'DM Sans',sans-serif;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);transition:border-color .2s,background .2s;resize:none;min-height:72px}
+.form-textarea:focus{outline:none;border-color:var(--navy)}
+
+.save-btn{width:100%;padding:14px;background:var(--navy);color:white;border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px}
+.save-btn:hover{background:var(--navy-light)}.save-btn:active{transform:scale(.98)}.save-btn svg{width:18px;height:18px}.save-btn:disabled{opacity:.55;cursor:not-allowed}
+.action-btn{padding:9px 16px;background:var(--navy);color:white;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;display:inline-flex;align-items:center;gap:5px}
+.action-btn:hover{background:var(--navy-light)}.action-btn svg{width:14px;height:14px}
+.action-btn.sec{background:var(--surface);color:var(--text-muted);border:1.5px solid var(--border)}
+.action-btn.sec:hover{border-color:var(--navy);color:var(--navy)}
+
+/* status badges */
+.s-normal{background:#eaf5ee;color:#1a7a4a}.s-elevated{background:#fef3e2;color:#d4720a}
+.s-high1{background:#fdecea;color:#c0392b}.s-high2{background:#fdecea;color:#a93226;font-weight:700}
+.s-low{background:#e8f1f8;color:#0f4c75}
+
+/* trends */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.stat-card{padding:14px 10px;text-align:center}
+.stat-card .sc-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);font-weight:600;margin-bottom:4px}
+.stat-card .sc-val{font-size:22px;font-weight:700;color:var(--navy);line-height:1}
+.stat-card .sc-unit{font-size:10px;color:var(--text-light);margin-top:2px}
+.chart-card{padding:16px;margin-bottom:16px}
+.chart-title{font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.chart-legend{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+.chart-legend span{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px}
+.chart-legend b{display:inline-block;width:12px;height:3px;border-radius:2px}
+.insight-card{border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px;font-size:13px;line-height:1.5;display:flex;gap:10px;align-items:flex-start}
+.insight-card svg{width:16px;height:16px;flex-shrink:0;margin-top:1px}
+
+/* history */
+.range-select{padding:7px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);cursor:pointer;transition:background .2s;-webkit-appearance:none}
+.history-list{display:flex;flex-direction:column;gap:8px}
+.history-item{overflow:hidden}
+.history-header{padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:var(--surface);transition:background .15s}
+.history-header:hover{background:var(--surface2)}
+.history-date{font-size:14px;font-weight:600}
+.history-meta{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+.history-body{display:none;padding:0 16px 14px;border-top:1px solid var(--border)}
+.history-item.open .history-body{display:block}
+.history-readings{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:12px;margin-bottom:8px}
+.history-avg{background:var(--navy-pale);border-radius:var(--radius-sm);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;transition:background .2s}
+.history-avg .ha-label{color:var(--navy);font-weight:600}
+.history-avg .ha-val{font-weight:700;color:var(--navy);font-size:14px}
+
+/* milestones */
+.milestone-form{padding:16px;margin-bottom:16px}
+.milestone-form-grid{display:grid;gap:10px;margin-bottom:12px}
+.milestones-list2{display:flex;flex-direction:column;gap:8px}
+.ms-item{padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.ms-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.ms-content{flex:1;min-width:0}
+.ms-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}
+.ms-note{font-size:13px;color:var(--text-muted);line-height:1.5;margin-top:2px}
+.ms-date{font-size:11px;color:var(--text-light);margin-top:4px}
+.ms-del{background:none;border:none;cursor:pointer;color:var(--text-light);padding:2px;transition:color .15s;flex-shrink:0}
+.ms-del:hover{color:var(--coral)}.ms-del svg{width:14px;height:14px}
+
+/* settings */
+.settings-section{margin-bottom:20px}
+.settings-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:10px;padding:0 4px}
+.profile-card{padding:16px}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pfield label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:4px}
+.pfield.full{grid-column:1/-1}
+.settings-row{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;transition:background .2s}
+.settings-row-label{font-size:14px;font-weight:500}
+.settings-row-sub{font-size:12px;color:var(--text-muted);margin-top:1px}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--border);border-radius:12px;cursor:pointer;transition:background .2s}
+.toggle input:checked+.toggle-track{background:var(--navy)}
+.toggle-track::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:white;top:3px;left:3px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle input:checked+.toggle-track::after{transform:translateX(20px)}
+
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:24px;font-size:13px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:200;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.error{background:var(--coral);color:white}.toast.success{background:var(--green);color:white}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-muted)}
+.empty-state svg{width:44px;height:44px;margin-bottom:12px;opacity:.25}
+.empty-state p{font-size:14px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="overlay hidden" id="overlay">
+  <div class="ov-spinner"></div>
+  <div class="ov-text" id="ov-text">Loading…</div>
+</div>
+
+<header class="app-header">
+  <div class="header-top">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div class="logo-text">Pulse<span>Mark</span></div>
+    </div>
+    <div class="header-right">
+      <span class="cloud-pill"><span class="cloud-dot spin" id="cloud-dot"></span><span id="cloud-lbl">Connecting…</span></span>
+      <button class="refresh-btn" onclick="loadFromSheet()" id="sync-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="sync-icon">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- LOG -->
+  <div id="screen-log" class="screen active">
+    <div id="today-summary"></div>
+    <div class="card log-card">
+      <div class="log-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Log a reading
+      </div>
+
+      <div class="frow two">
+        <div class="fgroup">
+          <label>Date</label>
+          <input type="date" class="form-input" id="log-date" onchange="renderTodaySummary()">
+        </div>
+        <div class="fgroup">
+          <label>Person</label>
+          <select class="form-select" id="log-user">
+            <option value="Mom">Mom</option>
+            <option value="Dad">Dad</option>
+            <option value="Self">Self</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="frow">
+        <div class="fgroup">
+          <label>Reading #</label>
+          <select class="form-select" id="log-reading">
+            <option value="I">I — First reading</option>
+            <option value="II">II — Second reading</option>
+            <option value="III">III — Third reading</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fdivider"></div>
+
+      <div class="frow three">
+        <div class="fgroup">
+          <label>Systolic</label>
+          <input type="number" class="form-input num" id="log-sys" placeholder="120" min="60" max="250" inputmode="numeric">
+        </div>
+        <div class="fgroup">
+          <label>Diastolic</label>
+          <input type="number" class="form-input num" id="log-dia" placeholder="80" min="40" max="150" inputmode="numeric">
+        </div>
+        <div class="fgroup">
+          <label>Pulse</label>
+          <input type="number" class="form-input num" id="log-pulse" placeholder="72" min="30" max="200" inputmode="numeric">
+        </div>
+      </div>
+
+      <button class="save-btn" onclick="saveReading()" id="save-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save to Google Sheets
+      </button>
+    </div>
+  </div>
+
+  <!-- TRENDS -->
+  <div id="screen-trends" class="screen">
+    <select class="range-select" id="trends-user" onchange="currentPerson=this.value;renderTrends()" style="margin-bottom:14px">
+      <option value="Mom">Mom</option>
+      <option value="Dad">Dad</option>
+      <option value="Self">Self</option>
+    </select>
+    <div id="trends-content"></div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="screen-history" class="screen">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <select class="range-select" id="hist-range" onchange="renderHistory()">
+        <option value="7">Last 7 days</option>
+        <option value="14">Last 14 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="0">All time</option>
+      </select>
+      <select class="range-select" id="hist-user" onchange="renderHistory()">
+        <option value="">All people</option>
+        <option value="Mom">Mom</option>
+        <option value="Dad">Dad</option>
+        <option value="Self">Self</option>
+      </select>
+    </div>
+    <div id="history-content"></div>
+  </div>
+
+  <!-- MILESTONES -->
+  <div id="screen-milestones" class="screen">
+    <div class="card milestone-form" style="margin-bottom:16px">
+      <p class="section-label" style="margin-bottom:14px">Add milestone</p>
+
+      <!-- Row 1: Person + Type -->
+      <div class="frow two" style="margin-bottom:12px">
+        <div class="fgroup">
+          <label>Person</label>
+          <select class="form-select" id="ms-person" onchange="currentPerson=this.value;renderMilestones()">
+            <option value="Mom">Mom</option>
+            <option value="Dad">Dad</option>
+            <option value="Self">Self</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label>Date</label>
+          <input type="date" class="form-input" id="ms-date">
+        </div>
+      </div>
+
+      <!-- Row 2: Type -->
+      <div class="fgroup" style="margin-bottom:12px">
+        <label>Type</label>
+        <select class="form-select" id="ms-type">
+          <option value="doctor">🩺 Doctor visit</option>
+          <option value="medication">💊 Medication change</option>
+          <option value="symptom">🔴 Symptom noted</option>
+          <option value="lab">🧪 Lab / test result</option>
+          <option value="weight">⚖️ Weight recorded</option>
+          <option value="other">📌 Other</option>
+        </select>
+      </div>
+
+      <!-- Note -->
+      <div class="fgroup" style="margin-bottom:14px">
+        <label>Note (optional)</label>
+        <textarea class="form-textarea" id="ms-note" placeholder="Add details…"></textarea>
+      </div>
+
+      <button class="save-btn" onclick="addMilestone()" id="ms-save-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Save to Google Sheets
+      </button>
+    </div>
+
+    <p class="section-label" id="ms-timeline-label">Timeline — Mom</p>
+    <div id="milestones-list"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="screen-settings" class="screen">
+    <div class="settings-section">
+      <p class="settings-section-title">Appearance</p>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Dark mode</div><div class="settings-row-sub">Easy on the eyes at night</div></div>
+        <label class="toggle"><input type="checkbox" id="dark-toggle" onchange="toggleDark(this.checked)"><div class="toggle-track"></div></label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-section-title">Google Sheets connection</p>
+      <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+        <div class="settings-row-label">Apps Script URL</div>
+        <div class="settings-row-sub">Paste your deployed Apps Script Web App URL to connect a different sheet.</div>
+        <input class="form-input" id="script-url-input" placeholder="https://script.google.com/macros/s/…/exec" style="font-size:11px">
+        <button class="action-btn" onclick="saveScriptUrl()" style="width:100%;justify-content:center">Save &amp; Reconnect</button>
+      </div>
+      <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <div class="settings-row-label">Required sheet structure</div>
+        <div class="settings-row-sub" style="font-family:monospace;background:var(--surface2);padding:6px 10px;border-radius:6px;font-size:11px;line-height:2;margin-top:4px;width:100%">
+          Tab <b>Log</b>: Date | User | Reading | Sys | Dia | Pulse<br>
+          Tab <b>Profiles</b>: Person | Date | Name | DOB | Blood | Height | Weight | Conditions | Meds | Doctor | Phone | Notes<br>
+          Tab <b>Milestones</b>: ID | Person | Type | Date | Note
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-section-title">Profiles</p>
+      <div class="card profile-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted)">Viewing profile for</label>
+          <select class="form-select" id="profile-person-select" onchange="switchProfilePerson(this.value)" style="width:auto;font-size:14px;font-weight:600;padding:6px 32px 6px 12px">
+            <option value="Mom">Mom</option>
+            <option value="Dad">Dad</option>
+            <option value="Self">Self</option>
+          </select>
+        </div>
+        <div class="profile-grid" id="profile-fields"></div>
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <button class="action-btn" onclick="saveProfile()" style="flex:1;justify-content:center;padding:11px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save to Google Sheets
+          </button>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text-light);text-align:center" id="profile-sync-note">Profiles are stored in Google Sheets — accessible from any device.</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-section-title">About</p>
+      <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:2px">
+        <div class="settings-row-label">PulseMark v2.1</div>
+        <div class="settings-row-sub">Data lives in Google Sheets — open from any device, always in sync.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="showScreen('log',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Log
+  </button>
+  <button class="nav-btn" onclick="showScreen('trends',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Trends
+  </button>
+  <button class="nav-btn" onclick="showScreen('history',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>History
+  </button>
+  <button class="nav-btn" onclick="showScreen('milestones',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>Events
+  </button>
+  <button class="nav-btn" onclick="showScreen('settings',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────────
+// Default Apps Script URL — user can override in Settings
+let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3a_4BuPQ7TthUjqfezYPoinE5s5el5Ocyd1mgfVBWOjpRpl9rrCJoL7OeUqacfXWO/exec';
+
+const PERSONS = ['Mom','Dad','Self'];
+let currentPerson = 'Mom';
+let trendCharts   = [];
+
+// In-memory data loaded from Google Sheets
+// Each row: { date, user, reading, sys, dia, pulse }
+let sheetRows = [];
+
+// ─────────────────────────────────────────────────
+// LOCAL STORAGE (settings / profiles / milestones only)
+// ─────────────────────────────────────────────────
+function load(key, def){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function save(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+
+let profiles   = load('pm_profiles',   { Mom:{}, Dad:{}, Self:{} });
+let milestones = load('pm_milestones', { Mom:[], Dad:[], Self:[] });
+// Pre-populate msRows from localStorage until Sheets loads
+let msRows = [];
+PERSONS.forEach(p=>{ (milestones[p]||[]).forEach(m=>msRows.push(m)); });
+let settings_  = load('pm_settings',  { dark:false });
+const savedUrl = load('pm_script_url', null);
+if (savedUrl) SCRIPT_URL = savedUrl;
+
+// ─────────────────────────────────────────────────
+// PROFILE FIELDS
+// ─────────────────────────────────────────────────
+const PROFILE_FIELDS = [
+  { key:'date',        label:'Date',           type:'date',              full:false },
+  { key:'name',        label:'Name',           ph:'e.g. Mary',           full:false },
+  { key:'dob',         label:'Date of birth',  type:'date',              full:false },
+  { key:'bloodtype',   label:'Blood type',     ph:'e.g. A+',             full:false },
+  { key:'height',      label:'Height',         ph:'e.g. 162 cm',         full:false },
+  { key:'weight',      label:'Weight',         ph:'e.g. 58 kg',          full:false },
+  { key:'conditions',  label:'Conditions',     ph:'Hypertension…',       full:true  },
+  { key:'medications', label:'Medications',    ph:'Amlodipine 5mg…',     full:true  },
+  { key:'doctor',      label:"Doctor's name",  ph:'Dr. Smith',           full:false },
+  { key:'doctor_phone',label:"Doctor's phone", ph:'416-555-0100',        full:false },
+  { key:'notes',       label:'Other notes',    ph:'Allergies, emergencies…', full:true, textarea:true },
+];
+
+const TAG_META = {
+  doctor:     { label:'Doctor visit',      color:'#0d7377' },
+  medication: { label:'Medication change', color:'#1b6ca8' },
+  symptom:    { label:'Symptom noted',     color:'#c0392b' },
+  lab:        { label:'Lab / test result', color:'#7b3fa0' },
+  weight:     { label:'Weight recorded',   color:'#1a7a4a' },
+  other:      { label:'Other',             color:'#d4720a' },
+};
+
+// ─────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────
+function todayKey(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtDate(k){
+  const d=new Date(k+'T12:00:00');
+  return d.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'});
+}
+function avg(arr){
+  const v=arr.map(Number).filter(x=>x&&!isNaN(x));
+  return v.length ? Math.round(v.reduce((a,b)=>a+b,0)/v.length) : null;
+}
+function bpStatus(sys,dia){
+  sys=Number(sys); dia=Number(dia);
+  if(sys<90||dia<60)       return{label:'Low',     cls:'s-low'};
+  if(sys<120&&dia<80)      return{label:'Normal',  cls:'s-normal'};
+  if(sys<130&&dia<80)      return{label:'Elevated',cls:'s-elevated'};
+  if(sys<140||dia<90)      return{label:'High I',  cls:'s-high1'};
+  return                          {label:'High II', cls:'s-high2'};
+}
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  setTimeout(()=>t.className='toast', type==='error'?6000:2500);
+}
+function setCloud(state,lbl){
+  const dot=document.getElementById('cloud-dot');
+  dot.className='cloud-dot '+(state==='ok'?'':state==='err'?'err':'spin');
+  document.getElementById('cloud-lbl').textContent=lbl;
+}
+function showOverlay(msg){ document.getElementById('ov-text').textContent=msg||'Loading…'; document.getElementById('overlay').classList.remove('hidden'); }
+function hideOverlay(){ document.getElementById('overlay').classList.add('hidden'); }
+
+// ─────────────────────────────────────────────────
+// GOOGLE SHEETS — READ
+// Apps Script must handle GET ?action=read and return:
+// { rows: [{date,user,reading,sys,dia,pulse}, …] }
+// OR return rows as arrays: [[date,user,reading,sys,dia,pulse], …]
+// ─────────────────────────────────────────────────
+async function loadFromSheet(){
+  const btn=document.getElementById('sync-btn');
+  btn.classList.add('spinning');
+  setCloud('spin','Loading…');
+  showOverlay('Loading from Google Sheets…');
+  try{
+    const res=await fetch(SCRIPT_URL+'?action=read',{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const j=await res.json();
+    if(j.error) throw new Error(j.error);
+    const raw=j.rows||j.data||[];
+    sheetRows=raw.map(r=>{
+      // support both object and array form
+      if(Array.isArray(r)) return {date:String(r[0]||'').trim(), user:String(r[1]||'').trim(), reading:String(r[2]||'').trim(), sys:r[3]||'', dia:r[4]||'', pulse:r[5]||''};
+      return {date:String(r.date||'').trim(), user:String(r.user||'').trim(), reading:String(r.reading||'').trim(), sys:r.sys||'', dia:r.dia||'', pulse:r.pulse||''};
+    }).filter(r=>r.date&&r.user);
+    setCloud('ok','Synced');
+    showToast('Loaded '+sheetRows.length+' rows ✓','success');
+    loadProfilesFromSheet();
+    loadMilestonesFromSheet();
+    refreshCurrentScreen();
+  }catch(e){
+    setCloud('err','Offline');
+    showToast('Could not load: '+e.message,'error');
+    console.error('loadFromSheet',e);
+  }
+  btn.classList.remove('spinning');
+  hideOverlay();
+}
+
+// ─────────────────────────────────────────────────
+// GOOGLE SHEETS — WRITE
+// POST body: { action:'append', row:[date,user,reading,sys,dia,pulse] }
+// Apps Script appends to the Log sheet and returns { ok:true }
+// ─────────────────────────────────────────────────
+async function postRow(row){
+  const res=await fetch(SCRIPT_URL,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({action:'append',row})
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const j=await res.json();
+  if(j.error) throw new Error(j.error);
+  return j;
+}
+
+// ─────────────────────────────────────────────────
+// DARK MODE
+// ─────────────────────────────────────────────────
+function toggleDark(on){
+  document.body.classList.toggle('dark',on);
+  settings_.dark=on; save('pm_settings',settings_);
+  document.getElementById('theme-color-meta').content=on?'#0a1929':'#0f4c75';
+}
+
+// ─────────────────────────────────────────────────
+// PERSON / SCREEN
+// ─────────────────────────────────────────────────
+function showScreen(s,btn){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+s).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(s==='log'){
+    renderTodaySummary();
+  }
+  if(s==='trends'){
+    const tu=document.getElementById('trends-user');
+    if(tu) tu.value=currentPerson;
+    renderTrends();
+  }
+  if(s==='history')    renderHistory();
+  if(s==='milestones'){
+    const mp=document.getElementById('ms-person');
+    if(mp) mp.value=currentPerson;
+    renderMilestones();
+  }
+  if(s==='settings')   renderSettings();
+}
+function refreshCurrentScreen(){
+  const s=document.querySelector('.screen.active')?.id?.replace('screen-','');
+  if(s==='log')        renderTodaySummary();
+  if(s==='trends')     renderTrends();
+  if(s==='history')    renderHistory();
+  if(s==='milestones') renderMilestones();
+}
+
+// ─────────────────────────────────────────────────
+// LOG SCREEN
+// ─────────────────────────────────────────────────
+function renderTodaySummary(){
+  const area=document.getElementById('today-summary');
+  const today=document.getElementById('log-date')?.value||todayKey();
+  const person=document.getElementById('log-user')?.value||currentPerson;
+  const rows=sheetRows.filter(r=>r.date===today&&r.user===person&&r.sys);
+  if(!rows.length){ area.innerHTML=''; return; }
+  const pills=['I','II','III'].map(rn=>{
+    const r=rows.find(x=>x.reading===rn);
+    if(r&&r.sys){
+      const st=bpStatus(r.sys,r.dia);
+      return `<div class="reading-pill"><div class="rp-lbl">${rn}</div><div class="rp-bp">${r.sys}<br><span style="font-size:11px;color:var(--text-muted)">${r.dia}</span></div><div class="rp-pulse">${r.pulse?r.pulse+' bpm':'—'}</div><span class="badge ${st.cls}">${st.label}</span></div>`;
+    }
+    return `<div class="reading-pill empty"><div class="rp-lbl">${rn}</div><div class="rp-bp">—</div></div>`;
+  }).join('');
+  const aS=avg(rows.map(r=>r.sys)), aD=avg(rows.map(r=>r.dia)), aP=avg(rows.map(r=>r.pulse).filter(Boolean));
+  const st=aS&&aD?bpStatus(aS,aD):null;
+  area.innerHTML=`<div class="card today-card">
+    <div class="today-card-header"><span class="today-label">${person} — today</span><span class="today-date">${fmtDate(today)}</span></div>
+    <div class="readings-grid">${pills}</div>
+    ${aS?`<div class="avg-strip"><span class="al">Daily avg</span><span class="av">${aS}/${aD}</span><span class="badge ${st.cls}" style="font-size:11px">${st.label}</span></div>`:''}
+  </div>`;
+}
+
+async function saveReading(){
+  const date   =document.getElementById('log-date').value||todayKey();
+  const user   =document.getElementById('log-user').value;
+  const reading=document.getElementById('log-reading').value;
+  const sys    =parseInt(document.getElementById('log-sys').value);
+  const dia    =parseInt(document.getElementById('log-dia').value);
+  const pulse  =parseInt(document.getElementById('log-pulse').value)||'';
+
+  if(!sys||!dia){ showToast('Enter Systolic and Diastolic','error'); return; }
+  if(sys<60||sys>250||dia<40||dia>150){ showToast('Values out of range','error'); return; }
+
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true;
+  showOverlay('Saving to Google Sheets…');
+
+  try{
+    await postRow([date,user,reading,sys,dia,pulse]);
+    // Optimistic local update (replace if same date/user/reading)
+    sheetRows=sheetRows.filter(r=>!(r.date===date&&r.user===user&&r.reading===reading));
+    sheetRows.push({date,user,reading,sys,dia,pulse});
+    document.getElementById('log-sys').value='';
+    document.getElementById('log-dia').value='';
+    document.getElementById('log-pulse').value='';
+    // Advance reading automatically
+    const next={'I':'II','II':'III','III':'I'};
+    document.getElementById('log-reading').value=next[reading]||'I';
+    renderTodaySummary();
+    setCloud('ok','Synced');
+    showToast(`Saved ${user} · ${reading} · ${sys}/${dia}`,'success');
+  }catch(e){
+    setCloud('err','Error');
+    showToast('Error: '+e.message,'error');
+  }
+  btn.disabled=false;
+  hideOverlay();
+}
+
+// ─────────────────────────────────────────────────
+// TRENDS
+// ─────────────────────────────────────────────────
+function renderTrends(){
+  trendCharts.forEach(c=>c.destroy()); trendCharts=[];
+  const area=document.getElementById('trends-content');
+  const rows=sheetRows.filter(r=>r.user===currentPerson&&r.sys);
+  if(!rows.length){
+    area.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><p>No data for ${currentPerson} yet.<br>Log some readings first.</p></div>`;
+    return;
+  }
+  const byDate={};
+  rows.forEach(r=>{ if(!byDate[r.date]) byDate[r.date]=[]; byDate[r.date].push(r); });
+  const keys=Object.keys(byDate).sort().slice(-30);
+  const allSys=[],allDia=[],allPulse=[],cLabels=[],cSys=[],cDia=[],cPulse=[];
+  keys.forEach(k=>{
+    const rr=byDate[k];
+    const dS=avg(rr.map(r=>r.sys)), dD=avg(rr.map(r=>r.dia)), dP=avg(rr.map(r=>r.pulse).filter(Boolean));
+    allSys.push(dS); allDia.push(dD); if(dP) allPulse.push(dP);
+    const d=new Date(k+'T12:00:00');
+    cLabels.push(d.toLocaleDateString('en-CA',{month:'short',day:'numeric'}));
+    cSys.push(dS); cDia.push(dD); cPulse.push(dP||null);
+  });
+  const aS=avg(allSys), aD=avg(allDia), aP=avg(allPulse);
+  const st=aS&&aD?bpStatus(aS,aD):null;
+  let insights='';
+  if(allSys.length>=6){
+    const rec5=allSys.slice(-5),old=allSys.slice(0,-5);
+    if(avg(rec5)>avg(old)+5) insights+=`<div class="insight-card" style="background:var(--coral-pale);color:var(--coral)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Systolic trending upward recently.</div>`;
+    else if(avg(rec5)<avg(old)-5) insights+=`<div class="insight-card" style="background:var(--green-pale);color:var(--green)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>Systolic trending down — readings improving.</div>`;
+    const hc=allSys.filter(v=>v>=140).length;
+    if(hc/allSys.length>0.3) insights+=`<div class="insight-card" style="background:var(--red-pale);color:var(--red)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${hc} of ${allSys.length} days showed Stage 2 hypertension.</div>`;
+  }
+  area.innerHTML=`
+    <div class="stats-row">
+      <div class="card stat-card"><div class="sc-label">Avg systolic</div><div class="sc-val">${aS||'—'}</div><div class="sc-unit">mmHg</div></div>
+      <div class="card stat-card"><div class="sc-label">Avg diastolic</div><div class="sc-val">${aD||'—'}</div><div class="sc-unit">mmHg</div></div>
+      <div class="card stat-card"><div class="sc-label">Avg pulse</div><div class="sc-val">${aP||'—'}</div><div class="sc-unit">bpm</div></div>
+    </div>
+    ${insights}
+    <div class="card chart-card">
+      <div class="chart-title">Blood pressure — last 30 days</div>
+      <div class="chart-legend"><span><b style="background:#1b6ca8"></b> Systolic</span><span><b style="background:#c0392b"></b> Diastolic</span></div>
+      <div style="position:relative;width:100%;height:200px"><canvas id="bp-chart"></canvas></div>
+    </div>
+    <div class="card chart-card">
+      <div class="chart-title">Pulse — last 30 days</div>
+      <div style="position:relative;width:100%;height:150px"><canvas id="pulse-chart"></canvas></div>
+    </div>`;
+  setTimeout(()=>{
+    const c1=document.getElementById('bp-chart');
+    if(c1) trendCharts.push(new Chart(c1,{type:'line',data:{labels:cLabels,datasets:[
+      {label:'Systolic',data:cSys,borderColor:'#1b6ca8',backgroundColor:'rgba(27,108,168,0.08)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#1b6ca8',tension:0.35,fill:true},
+      {label:'Diastolic',data:cDia,borderColor:'#c0392b',backgroundColor:'transparent',borderWidth:2,pointRadius:2,pointBackgroundColor:'#c0392b',tension:0.35},
+      {label:'T120',data:cLabels.map(()=>120),borderColor:'rgba(15,76,117,0.18)',borderWidth:1,borderDash:[3,4],pointRadius:0},
+      {label:'T80',data:cLabels.map(()=>80),borderColor:'rgba(192,57,43,0.18)',borderWidth:1,borderDash:[3,4],pointRadius:0}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:50,max:180,ticks:{font:{size:10}}},x:{ticks:{maxTicksLimit:8,maxRotation:45,font:{size:10}}}}}}));
+    const c2=document.getElementById('pulse-chart');
+    if(c2&&cPulse.some(v=>v)) trendCharts.push(new Chart(c2,{type:'line',data:{labels:cLabels,datasets:[{label:'Pulse',data:cPulse,borderColor:'#0d7377',backgroundColor:'rgba(13,115,119,0.08)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#0d7377',tension:0.35,fill:true,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+' bpm',font:{size:10}}},x:{ticks:{maxTicksLimit:8,maxRotation:45,font:{size:10}}}}}}));
+  },50);
+}
+
+// ─────────────────────────────────────────────────
+// HISTORY
+// ─────────────────────────────────────────────────
+function renderHistory(){
+  const area=document.getElementById('history-content');
+  const range=parseInt(document.getElementById('hist-range').value);
+  const userFilter=document.getElementById('hist-user')?.value||'';
+  let rows=sheetRows.filter(r=>r.sys);
+  if(userFilter) rows=rows.filter(r=>r.user===userFilter);
+  if(range>0){ const c=new Date(); c.setDate(c.getDate()-range); rows=rows.filter(r=>new Date(r.date+'T12:00:00')>=c); }
+  if(!rows.length){ area.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p>No readings in this period.</p></div>`; return; }
+  const grouped={};
+  rows.forEach(r=>{ const k=r.date+'|'+r.user; if(!grouped[k]) grouped[k]={date:r.date,user:r.user,readings:{}}; grouped[k].readings[r.reading]=r; });
+  const keys=Object.keys(grouped).sort().reverse();
+  let html='<div class="history-list">';
+  keys.forEach((k,idx)=>{
+    const g=grouped[k];
+    const rr=['I','II','III'].map(rn=>g.readings[rn]).filter(Boolean);
+    const aS=avg(rr.map(r=>r.sys)), aD=avg(rr.map(r=>r.dia)), aP=avg(rr.map(r=>r.pulse).filter(Boolean));
+    const st=aS&&aD?bpStatus(aS,aD):null;
+    const pills=['I','II','III'].map(rn=>{
+      const r=g.readings[rn];
+      if(r&&r.sys){ const s=bpStatus(r.sys,r.dia); return `<div class="reading-pill"><div class="rp-lbl">${rn}</div><div class="rp-bp">${r.sys}/${r.dia}</div><div class="rp-pulse">${r.pulse?r.pulse+' bpm':'—'}</div><span class="badge ${s.cls}">${s.label}</span></div>`; }
+      return `<div class="reading-pill empty"><div class="rp-lbl">${rn}</div><div class="rp-bp">—</div></div>`;
+    }).join('');
+    html+=`<div class="card history-item${idx===0?' open':''}">
+      <div class="history-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="history-date">${fmtDate(g.date)} <span style="font-size:11px;color:var(--text-light);font-weight:400">${g.user}</span></span>
+        <span class="history-meta">${st?`<span class="badge ${st.cls}">${st.label}</span>`:''} ${rr.length}/3</span>
+      </div>
+      <div class="history-body">
+        <div class="history-readings">${pills}</div>
+        ${aS?`<div class="history-avg"><span class="ha-label">Daily avg</span><span class="ha-val">${aS}/${aD}${aP?' · '+aP+' bpm':''}</span></div>`:''}
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+  area.innerHTML=html;
+}
+
+// ─────────────────────────────────────────────────
+// MILESTONES
+// ─────────────────────────────────────────────────
+// In-memory milestones loaded from Sheets
+// Structure: [{id, person, type, date, note}, ...]
+async function addMilestone(){
+  const person = document.getElementById('ms-person').value;
+  const type   = document.getElementById('ms-type').value;
+  const date   = document.getElementById('ms-date').value || todayKey();
+  const note   = document.getElementById('ms-note').value.trim();
+  if(!type){ showToast('Select a type','error'); return; }
+
+  const btn = document.getElementById('ms-save-btn');
+  btn.disabled = true;
+  showOverlay('Saving milestone…');
+
+  const id = Date.now();
+  const row = [id, person, type, date, note];
+
+  try {
+    const msRes = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'appendMilestone', row})
+    });
+    const msJ = await msRes.json();
+    if(msJ.error) throw new Error(msJ.error);
+    msRows.unshift({id, person, type, date, note});
+    // Also cache locally
+    milestones[person] = msRows.filter(m=>m.person===person);
+    save('pm_milestones', milestones);
+    document.getElementById('ms-date').value = '';
+    document.getElementById('ms-note').value = '';
+    currentPerson = person;
+    renderMilestones();
+    showToast('Milestone saved ✓','success');
+  } catch(e) {
+    // Fallback: save locally only
+    if(!milestones[person]) milestones[person]=[];
+    milestones[person].unshift({id, person, type, date, note});
+    msRows.unshift({id, person, type, date, note});
+    save('pm_milestones', milestones);
+    document.getElementById('ms-date').value='';
+    document.getElementById('ms-note').value='';
+    renderMilestones();
+    showToast('Saved locally (Sheets unavailable)','success');
+  }
+  btn.disabled = false;
+  hideOverlay();
+}
+
+async function deleteMilestone(id){
+  const person = currentPerson;
+  showOverlay('Deleting…');
+  try {
+    const delRes = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'deleteMilestone', id})
+    });
+    const delJ = await delRes.json();
+    if(delJ.error) throw new Error(delJ.error);
+  } catch(e) { console.warn('deleteMilestone error:', e); }
+  msRows = msRows.filter(m=>m.id!==id);
+  milestones[person] = milestones[person].filter(m=>m.id!==id);
+  save('pm_milestones', milestones);
+  hideOverlay();
+  renderMilestones();
+}
+
+function renderMilestones(){
+  const area  = document.getElementById('milestones-list');
+  const label = document.getElementById('ms-timeline-label');
+  const list  = msRows.filter(m=>m.person===currentPerson).sort((a,b)=>b.date.localeCompare(a.date));
+  if(label) label.textContent = 'Timeline — ' + currentPerson;
+  // Sync person dropdown
+  const pd = document.getElementById('ms-person');
+  if(pd) pd.value = currentPerson;
+  if(!list.length){
+    area.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg><p>No milestones for ${currentPerson} yet.</p></div>`;
+    return;
+  }
+  area.innerHTML=`<div class="milestones-list2">${list.map(m=>{
+    const meta=TAG_META[m.type]||TAG_META.other;
+    return `<div class="card ms-item">
+      <div class="ms-dot" style="background:${meta.color}"></div>
+      <div class="ms-content">
+        <div class="ms-tag" style="color:${meta.color}">${meta.label}</div>
+        ${m.note?`<div class="ms-note">${m.note}</div>`:''}
+        <div class="ms-date">${fmtDate(m.date)}</div>
+      </div>
+      <button class="ms-del" onclick="deleteMilestone(${m.id})" title="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function loadMilestonesFromSheet(){
+  try {
+    const res = await fetch(SCRIPT_URL+'?action=readMilestones', {cache:'no-store'});
+    if(!res.ok) return;
+    const j = await res.json();
+    if(j.rows){
+      msRows = j.rows.map(r=>({
+        id:    Number(r[0]||r.id),
+        person:String(r[1]||r.person||''),
+        type:  String(r[2]||r.type||'other'),
+        date:  String(r[3]||r.date||''),
+        note:  String(r[4]||r.note||''),
+      })).filter(m=>m.person&&m.date);
+      // Also keep localStorage cache in sync
+      PERSONS.forEach(p=>{ milestones[p]=msRows.filter(m=>m.person===p); });
+      save('pm_milestones', milestones);
+      const active=document.querySelector('.screen.active')?.id;
+      if(active==='screen-milestones') renderMilestones();
+    }
+  } catch(e) {
+    // Fall back to localStorage
+    msRows = [];
+    PERSONS.forEach(p=>{ (milestones[p]||[]).forEach(m=>msRows.push(m)); });
+  }
+}
+
+// ─────────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────────
+let activeProfilePerson = 'Mom';
+
+function renderSettings(){
+  document.getElementById('dark-toggle').checked=!!settings_.dark;
+  document.getElementById('script-url-input').value=SCRIPT_URL||'';
+  const psel=document.getElementById('profile-person-select');
+  if(psel) psel.value=activeProfilePerson;
+  renderProfileFields(activeProfilePerson);
+}
+
+function switchProfilePerson(p){
+  activeProfilePerson = p;
+  renderProfileFields(p);
+}
+
+function renderProfileFields(p){
+  if(!profiles[p]) profiles[p]={};
+  // Default date to today if not set
+  if(!profiles[p].date) profiles[p].date = todayKey();
+  const grid=document.getElementById('profile-fields');
+  if(!grid) return;
+  grid.innerHTML=PROFILE_FIELDS.map(f=>`
+    <div class="pfield${f.full?' full':''}">
+      <label>${f.label}</label>
+      ${f.textarea
+        ?`<textarea class="form-textarea" id="pf-${f.key}" placeholder="${f.ph||''}" style="min-height:56px;font-size:13px">${profiles[p][f.key]||''}</textarea>`
+        :`<input class="form-input" type="${f.type||'text'}" id="pf-${f.key}" placeholder="${f.ph||''}" value="${profiles[p][f.key]||''}" style="font-size:13px">`
+      }
+    </div>`).join('');
+}
+
+async function saveProfile(){
+  const p = activeProfilePerson;
+  if(!profiles[p]) profiles[p]={};
+  PROFILE_FIELDS.forEach(f=>{ const el=document.getElementById(`pf-${f.key}`); if(el) profiles[p][f.key]=el.value.trim(); });
+  // Save to localStorage as fallback
+  save('pm_profiles', profiles);
+  // Save to Google Sheets Profiles tab
+  const note = document.getElementById('profile-sync-note');
+  if(note) note.textContent = 'Saving…';
+  try {
+    const row = [p, ...PROFILE_FIELDS.map(f=>profiles[p][f.key]||'')];
+    const res = await fetch(SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'saveProfile', row})
+    });
+    const j = await res.json();
+    if(j.error) throw new Error(j.error);
+    if(note) note.textContent = `${p}'s profile saved to Google Sheets ✓`;
+    showToast(`${p}'s profile saved ✓`,'success');
+  } catch(e) {
+    if(note) note.textContent = 'Saved locally (could not reach Sheets)';
+    showToast(`${p}'s profile saved locally`,'success');
+    console.warn('saveProfile error:', e);
+  }
+  setTimeout(()=>{ if(note) note.textContent='Profiles are stored in Google Sheets — accessible from any device.'; }, 3000);
+}
+
+async function loadProfilesFromSheet(){
+  try {
+    const res = await fetch(SCRIPT_URL+'?action=readProfiles', {cache:'no-store'});
+    if(!res.ok) return;
+    const j = await res.json();
+    if(j.profiles){
+      // j.profiles = { Mom:{...}, Dad:{...}, Self:{...} }
+      Object.assign(profiles, j.profiles);
+      save('pm_profiles', profiles);
+      // Re-render if settings screen is visible
+      const active = document.querySelector('.screen.active')?.id;
+      if(active==='screen-settings') renderProfileFields(activeProfilePerson);
+    }
+  } catch(e){ /* silently use localStorage fallback */ }
+}
+function saveScriptUrl(){
+  const v=document.getElementById('script-url-input').value.trim();
+  if(!v){ showToast('Paste a URL first','error'); return; }
+  SCRIPT_URL=v; save('pm_script_url',v);
+  showToast('URL saved — reconnecting…','success');
+  setTimeout(loadFromSheet,500);
+}
+
+// ─────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────
+function syncAllPersonDropdowns(p){
+  currentPerson=p;
+  ['log-user','trends-user','ms-person'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=p;});
+}
+
+(function init(){
+  if(settings_.dark) toggleDark(true);
+  document.getElementById('log-date').value=todayKey();
+  document.getElementById('ms-date').value=todayKey();
+  document.getElementById('log-user').value=currentPerson;
+  // Wire log-user change to sync all person dropdowns and re-render today summary
+  const lu=document.getElementById('log-user');
+  if(lu) lu.addEventListener('change',function(){ syncAllPersonDropdowns(lu.value); renderTodaySummary(); });
+  loadFromSheet();
+})();
+</script>
+</body>
+</html>
