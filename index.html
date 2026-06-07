@@ -281,11 +281,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
   <!-- TRENDS -->
   <div id="screen-trends" class="screen">
-    <select class="range-select" id="trends-user" onchange="currentPerson=this.value;renderTrends()" style="margin-bottom:14px">
-      <option value="Mom">Mom</option>
-      <option value="Dad">Dad</option>
-      <option value="Self">Self</option>
-    </select>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <select class="range-select" id="trends-user" onchange="currentPerson=this.value;renderTrends()">
+        <option value="Mom">Mom</option>
+        <option value="Dad">Dad</option>
+        <option value="Self">Self</option>
+      </select>
+      <select class="range-select" id="trends-range" onchange="renderTrends()">
+        <option value="30">Last 30 days</option>
+        <option value="60">Last 60 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="180">Last 6 months</option>
+        <option value="0">All time</option>
+      </select>
+    </div>
     <div id="trends-content"></div>
   </div>
 
@@ -381,7 +390,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
         <div class="settings-row-label">Required sheet structure</div>
         <div class="settings-row-sub" style="font-family:monospace;background:var(--surface2);padding:6px 10px;border-radius:6px;font-size:11px;line-height:2;margin-top:4px;width:100%">
           Tab <b>Log</b>: Date | User | Reading | Sys | Dia | Pulse<br>
-          Tab <b>Profiles</b>: Person | Date | Name | DOB | Blood | Height | Weight | Conditions | Meds | Doctor | Phone | Notes<br>
+          Tab <b>Profiles</b>: Person | Name | DOB | Blood | Height | Weight | Conditions | Meds | Doctor | Phone | Notes<br>
           Tab <b>Milestones</b>: ID | Person | Type | Date | Note
         </div>
       </div>
@@ -473,7 +482,6 @@ if (savedUrl) SCRIPT_URL = savedUrl;
 // PROFILE FIELDS
 // ─────────────────────────────────────────────────
 const PROFILE_FIELDS = [
-  { key:'date',        label:'Date',           type:'date',              full:false },
   { key:'name',        label:'Name',           ph:'e.g. Mary',           full:false },
   { key:'dob',         label:'Date of birth',  type:'date',              full:false },
   { key:'bloodtype',   label:'Blood type',     ph:'e.g. A+',             full:false },
@@ -699,9 +707,13 @@ function renderTrends(){
     area.innerHTML=`<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><p>No data for ${currentPerson} yet.<br>Log some readings first.</p></div>`;
     return;
   }
+  const rangeEl=document.getElementById('trends-range');
+  const rangeDays=rangeEl?parseInt(rangeEl.value)||0:30;
+  const rangeLabel=rangeEl?rangeEl.options[rangeEl.selectedIndex].text:'Last 30 days';
   const byDate={};
   rows.forEach(r=>{ if(!byDate[r.date]) byDate[r.date]=[]; byDate[r.date].push(r); });
-  const keys=Object.keys(byDate).sort().slice(-30);
+  const allKeys=Object.keys(byDate).sort();
+  const keys=rangeDays===0?allKeys:allKeys.slice(-rangeDays);
   const allSys=[],allDia=[],allPulse=[],cLabels=[],cSys=[],cDia=[],cPulse=[];
   keys.forEach(k=>{
     const rr=byDate[k];
@@ -729,12 +741,12 @@ function renderTrends(){
     </div>
     ${insights}
     <div class="card chart-card">
-      <div class="chart-title">Blood pressure — last 30 days</div>
+      <div class="chart-title">Blood pressure — ${rangeLabel.toLowerCase()}</div>
       <div class="chart-legend"><span><b style="background:#1b6ca8"></b> Systolic</span><span><b style="background:#c0392b"></b> Diastolic</span></div>
       <div style="position:relative;width:100%;height:200px"><canvas id="bp-chart"></canvas></div>
     </div>
     <div class="card chart-card">
-      <div class="chart-title">Pulse — last 30 days</div>
+      <div class="chart-title">Pulse — ${rangeLabel.toLowerCase()}</div>
       <div style="position:relative;width:100%;height:150px"><canvas id="pulse-chart"></canvas></div>
     </div>`;
   setTimeout(()=>{
@@ -934,8 +946,6 @@ function switchProfilePerson(p){
 
 function renderProfileFields(p){
   if(!profiles[p]) profiles[p]={};
-  // Default date to today if not set
-  if(!profiles[p].date) profiles[p].date = todayKey();
   const grid=document.getElementById('profile-fields');
   if(!grid) return;
   grid.innerHTML=PROFILE_FIELDS.map(f=>`
